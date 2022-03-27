@@ -25,7 +25,7 @@ import { LatestsModule } from './latests/latests.module';
               return `${timestamp} [${label}] ${level}: ${message}`;
             }),
           ),
-          filename: './logs/log.log',
+          filename: './tmp/log.log',
           level: 'http',
           maxsize: 1024 * 1024 * 10,
         }),

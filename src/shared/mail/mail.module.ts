@@ -23,7 +23,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
         from: `"No Reply" <${process.env.MAIL_FROM}>`,
       },
       template: {
-        dir: join(__dirname, 'templates'),
+        dir: join(process.cwd(), 'tmp/templates'),
         adapter: new HandlebarsAdapter(),
         options: {
           strict: true,
