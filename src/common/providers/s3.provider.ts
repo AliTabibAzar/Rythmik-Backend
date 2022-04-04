@@ -12,11 +12,18 @@ export class S3Provicer {
     });
   }
 
-  public getFileStream(key: string, bucket: string) {
+  public getFileStream(key: string, bucket: string, range?: string) {
     const downloadParams = {
       Key: key,
       Bucket: bucket,
+      Range: range,
     };
     return this.getS3().getObject(downloadParams).createReadStream();
+  }
+  public sizeOf(key: string, bucket: string) {
+    return this.getS3()
+      .headObject({ Key: key, Bucket: bucket })
+      .promise()
+      .then((res) => res.ContentLength);
   }
 }

@@ -6,20 +6,17 @@ import {
   InternalServerErrorException,
   Param,
   Patch,
-  Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Roles } from 'src/auth/decorators/role.decorator';
-import { Role } from 'src/auth/enums/role.enum';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
 import { AudioService } from './audio.service';
 import { UpdateAudioDto } from './dtos/update-audio.to';
 import { Audio } from './schemas/audio.schema';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { S3Provicer } from 'src/common/providers/s3.provider';
 
 @Controller('audio')
@@ -42,25 +39,60 @@ export class AudioController {
   @Get('/:audio_id/play')
   public async playAudio(
     @Res() res: Response,
+    @Req() req: Request,
     @Param('audio_id') audioID: string,
   ) {
     try {
       const audio = await this.audioService.playAudio(audioID);
-      const readStream = await new S3Provicer().getFileStream(
+      const audioSize = await new S3Provicer().sizeOf(
         audio.audio_s3_key,
         'rythmik-audio',
       );
-      readStream
-        .on('error', (error: any) => {
-          if (error.statusCode == 404) {
-            res.status(500).send({
-              statusCode: 404,
-              message: 'فایل صوتی یافت نشد !',
-              error: 'Not Found',
-            });
-          }
-        })
-        .pipe(res);
+      if (req.headers.range) {
+        const range = req.headers.range;
+        const parts = range.replace(/bytes=/, '').split('-');
+        const partialstart = parts[0];
+        const partialend = parts[1];
+        const start = parseInt(partialstart, 10);
+        const end = partialend ? parseInt(partialend, 10) : audioSize - 1;
+        const chunksize = end - start + 1;
+        const audioRange = 'bytes ' + start + '-' + end + '/' + audioSize;
+        res.writeHead(206, {
+          'Content-Range': audioRange,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': 'audio/mpeg',
+        });
+        new S3Provicer()
+          .getFileStream(audio.audio_s3_key, 'rythmik-audio', range)
+          .on('error', (error: any) => {
+            if (error.statusCode == 404) {
+              res.status(500).send({
+                statusCode: 404,
+                message: 'فایل صوتی یافت نشد !',
+                error: 'Not Found',
+              });
+            }
+          })
+          .pipe(res);
+      } else {
+        res.writeHead(200, {
+          'Content-Length': audioSize,
+          'Content-Type': 'audio/mpeg',
+        });
+        new S3Provicer()
+          .getFileStream(audio.audio_s3_key, 'rythmik-audio')
+          .on('error', (error: any) => {
+            if (error.statusCode == 404) {
+              res.status(500).send({
+                statusCode: 404,
+                message: 'فایل صوتی یافت نشد !',
+                error: 'Not Found',
+              });
+            }
+          })
+          .pipe(res);
+      }
     } catch (error) {
       throw new InternalServerErrorException('خطا در اجرای فایل صوتی.');
     }
