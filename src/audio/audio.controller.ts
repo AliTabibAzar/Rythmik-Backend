@@ -73,8 +73,7 @@ export class AudioController {
                 error: 'Not Found',
               });
             }
-          })
-          .pipe(res);
+          });
       } else {
         res.writeHead(200, {
           'Content-Length': audioSize,

@@ -34,7 +34,9 @@ export class CategoryService {
         .aggregate()
         .match({ category: categoryID })
         .addFields({ likes_count: { $size: '$likes' } })
-        .sort({ [sortBy]: -1 });
+        .sort({ [sortBy]: -1 })
+        .skip((page - 1) * perPage)
+        .limit(perPage);
       return { audios };
     } catch (error) {
       throw new BadRequestException();

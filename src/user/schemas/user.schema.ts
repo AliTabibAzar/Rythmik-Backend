@@ -29,17 +29,27 @@ export class User {
     twitter: string;
     telegram: string;
   };
-  @Prop({ type: Types.ObjectId, ref: 'Audio' })
+  roles: Role[];
+  @Prop({ type: [Types.ObjectId], ref: 'Audio' })
   likes: Audio[];
   @Prop({ default: Role.User })
-  roles: Role[];
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: [Types.ObjectId], ref: 'User' })
   fallowed: this[];
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: [Types.ObjectId], ref: 'User' })
   fallowers: this[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.virtual('likes_count').get(function () {
+  return this.likes.length;
+});
+UserSchema.virtual('fallowers_count').get(function () {
+  return this.fallowers.length;
+});
+UserSchema.virtual('fallowed_count').get(function () {
+  return this.fallowed.length;
+});
 
 UserSchema.methods.comparePassword = function (password): boolean {
   if (this.password) return compareSync(password, this.password);
